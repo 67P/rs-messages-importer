@@ -83,53 +83,40 @@ var setupRemoteStorage = function(program) {
   return pending.promise;
 };
 
+var parseServerHostFromConfigFile = function(filename, network) {
+  return fs.readFileSync(filename, {encoding: 'utf-8'})
+           .match(new RegExp('<Network '+network+'>\[\\S\\s\]\*<Network', 'im'))[0]
+           .match(/Server \= (.+) [\d\+]/im)[1];
+};
+
 var importFromFilesOld = function(program, dir, files) {
   console.log('Importing '+files.length+' (pre-1.6) log files from '+dir+'\n');
   var pending = Promise.defer();
 
-  files.forEach(function(filename) {
+  files.forEach(function(filename, index) {
     var matches = filename.match(/_(.+)_(.+)_(\d+)\.log/i);
     var network = matches[1];
     var channel = matches[2];
     var dateStr = matches[3].substr(0,4)+'-'+matches[3].substr(4,2)+'-'+matches[3].substr(6,2);
     var date = new Date(Date.parse(dateStr));
 
-    var serverHost = fs.readFileSync(program.input+'configs/znc.conf', {encoding: 'utf-8'})
-                       .match(new RegExp('<Network '+network+'>\[\\S\\s\]\*<Network', 'im'))[0]
-                       .match(/Server \= (.+) [\d\+]/im)[1];
+    parseFile(filename, dateStr).then(function(messages) {
+      if (messages.length > 0) {
+        var serverHost = parseServerHostFromConfigFile(program.input+'configs/znc.conf', network);
 
-    var archive = new rsMessagesIrc.DailyArchive({
-      network: { name: network, ircURI: 'irc://'+serverHost },
-      channelName: channel,
-      date: date,
-      isPublic: program.rsPublic || false
-    });
+        var archive = new rsMessagesIrc.DailyArchive({
+          network: { name: network, ircURI: 'irc://'+serverHost },
+          channelName: channel,
+          date: date,
+          isPublic: program.rsPublic || false
+        });
 
-    var messages = [];
-
-    var content = fs.readFileSync(filename, {encoding: 'utf-8'})
-                    .split('\n');
-
-    content.forEach(function(line, index) {
-      var message = {}
-      var matchTextMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \<(.+)\> (.+)$/);
-
-      if (matchTextMessage) {
-        var timeStr = matchTextMessage[1];
-
-        message.timestamp = Date.parse(dateStr+' '+timeStr);
-        message.from = matchTextMessage[2];
-        message.text = matchTextMessage[3];
-        message.type = "text"
-      }
-
-      if (Object.keys(message).length !== 0) {
-        messages.push(message);
-      };
-
-      if (index === content.length-1 && messages.length > 0) {
-        console.log('write archive', messages.length);
+        // TODO use promise
         archive.addMessages(messages, true);
+
+        if (index === files.length-1) {
+          pending.resolve();
+        }
       }
     });
   });
@@ -139,10 +126,67 @@ var importFromFilesOld = function(program, dir, files) {
 
 var importFromFilesNew = function(program, dir, files) {
   console.log('Importing '+files.length+' log files from '+dir+'\n');
-  files.forEach(function(filename) {
-    // console.log(filename);
+  var pending = Promise.defer();
+
+  files.forEach(function(filename, index) {
+    var matches = filename.match(new RegExp('log/'+program.zncUser+'/'+'\(\.\+\)'))[1]
+                          .match(/(.+)\/(.+)\/(.+)\.log$/i);
+    var network = matches[1];
+    var channel = matches[2];
+    var dateStr = matches[3];
+    var date = new Date(Date.parse(dateStr));
+
+    parseFile(filename, dateStr).then(function(messages) {
+      if (messages.length > 0) {
+        var serverHost = parseServerHostFromConfigFile(program.input+'configs/znc.conf', network);
+
+        var archive = new rsMessagesIrc.DailyArchive({
+          network: { name: network, ircURI: 'irc://'+serverHost },
+          channelName: channel,
+          date: date,
+          isPublic: program.rsPublic || false
+        });
+
+        // TODO use promise
+        archive.addMessages(messages, true);
+
+        if (index === files.length-1) {
+          pending.resolve();
+        }
+      }
+    });
   });
+
+  return pending.promise;
 };
+
+var parseFile = function(filename, dateStr) {
+  var pending = Promise.defer();
+  var messages = [];
+  var content = fs.readFileSync(filename, {encoding: 'utf-8'}).split('\n');
+
+  content.forEach(function(line, index) {
+    var message = {}
+    var matchTextMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \<(.+)\> (.+)$/);
+
+    if (matchTextMessage) {
+      message.timestamp = Date.parse(dateStr+' '+matchTextMessage[1]);
+      message.from = matchTextMessage[2];
+      message.text = matchTextMessage[3];
+      message.type = "text"
+    }
+
+    if (Object.keys(message).length !== 0) {
+      messages.push(message);
+    }
+
+    if (index === content.length-1) {
+      pending.resolve(messages);
+    }
+  });
+
+  return pending.promise;
+}
 
 module.exports = function(program){
 
