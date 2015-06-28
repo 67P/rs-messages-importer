@@ -9,6 +9,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "commander": "^2.8.1",
     "remotestoragejs": "remotestorage/remotestorage.js#eafe8ce4e975479c511c7685b1c9a70fcef0bebe",
     "remotestoragejs-modules": "remotestorage/modules#messages-irc"
   }
