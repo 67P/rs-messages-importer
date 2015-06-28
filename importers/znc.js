@@ -50,6 +50,13 @@ module.exports = function(program){
   var logsDir = program.input+'moddata/log/';
   var files = fs.readdirSync(logsDir);
 
+  if (program.zncNetwork && program.zncChannel) {
+    files = files.filter(function(filename) {
+      var r = new RegExp('_'+program.zncNetwork+'_'+program.zncChannel+'_', 'i');
+      return filename.match(r);
+    });
+  }
+
   if (files.length > 0) {
     console.log('Importing '+files.length+' log files from '+logsDir+'\n');
 

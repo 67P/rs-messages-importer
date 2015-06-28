@@ -14,6 +14,8 @@ program
   .option('--rs-user <user address>', 'User address of the RS account to import to')
   .option('--rs-token <token>', 'Valid bearer token for the "messages-irc:rw" scope')
   .option('--rs-public', 'Import to public folder')
+  .option('--znc-network <network>', 'Only import logs from given network')
+  .option('--znc-channel <channel>', 'Only import logs from given channel')
   .parse(process.argv);
 
 if (!(program.rsUser && program.rsToken &&
