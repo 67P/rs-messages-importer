@@ -13,6 +13,7 @@ program
   .option('-i, --input <type>', 'Input directory')
   .option('--rs-user <user address>', 'User address of the RS account to import to')
   .option('--rs-token <token>', 'Valid bearer token for the "messages-irc:rw" scope')
+  .option('--rs-public', 'Import to public folder')
   .parse(process.argv);
 
 if (!(program.rsUser && program.rsToken &&

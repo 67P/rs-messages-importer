@@ -35,7 +35,7 @@ var setupRemoteStorage = function(program) {
   });
   remoteStorage.on('error', function(error) {
     console.error('Error:', error);
-    pending.reject(error);
+    process.exit(1);
   });
 
   remoteStorage.connect(program.rsUser, program.rsToken);
@@ -54,9 +54,8 @@ module.exports = function(program){
     console.log('Importing '+files.length+' log files from '+logsDir+'\n');
 
     setupRemoteStorage(program).then(function(){
-      console.log('Starting import...\n');
-    }, function(error) {
-      process.exit(1);
+      var privPub = program.rsPublic ? 'public' : 'private';
+      console.log('Starting import to '+privPub+' folder...\n');
     });
   } else {
     console.error('Error: No files found in', logsDir);
