@@ -93,10 +93,13 @@ var importFromFilesOld = function(program, dir, files) {
     var channel = matches[2];
     var dateStr = matches[3].substr(0,4)+'-'+matches[3].substr(4,2)+'-'+matches[3].substr(6,2);
     var date = new Date(Date.parse(dateStr));
-    // console.log(network, channel, date);
+
+    var serverHost = fs.readFileSync(program.input+'configs/znc.conf', {encoding: 'utf-8'})
+                       .match(new RegExp('<Network '+network+'>\[\\S\\s\]\*<Network', 'im'))[0]
+                       .match(/Server \= (.+) [\d\+]/im)[1];
 
     var archive = new rsMessagesIrc.DailyArchive({
-      network: { name: network, ircURI: 'change-me' },
+      network: { name: network, ircURI: 'irc://'+serverHost },
       channelName: channel,
       date: date,
       isPublic: program.rsPublic || false
