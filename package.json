@@ -1,0 +1,15 @@
+{
+  "name": "rs-messages-importer",
+  "version": "0.1.0",
+  "description": "Scripts for importing chat messages to RemoteStorage accounts",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "remotestoragejs": "remotestorage/remotestorage.js#eafe8ce4e975479c511c7685b1c9a70fcef0bebe",
+    "remotestoragejs-modules": "remotestorage/modules#messages-irc"
+  }
+}
