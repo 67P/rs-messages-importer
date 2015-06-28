@@ -1,5 +1,10 @@
-var fs = require('fs'),
-    path = require('path');
+var fs = require('fs');
+var path = require('path');
+var RemoteStorage = require("remotestoragejs");
+require("../lib/messages-irc.js");
+var remoteStorage = new RemoteStorage();
+global.remoteStorage = remoteStorage;
+var rsMessagesIrc = remoteStorage["messages-irc"];
 
 var validateZncDir = function(dir) {
   if (!fs.existsSync(dir)) {
@@ -13,19 +18,48 @@ var validateZncDir = function(dir) {
   else {
     return true;
   }
-}
+};
 
-module.exports = function(dir){
+var setupRemoteStorage = function(program) {
+  var pending = Promise.defer();
 
-  if (!validateZncDir(dir)) { process.exit(1) };
+  remoteStorage.access.claim("messages-irc", "rw");
+  remoteStorage.caching.disable("/");
 
-  var logsDir = dir+'moddata/log/';
+  remoteStorage.on('ready', function() {
+    console.log("remoteStorage ready");
+  });
+  remoteStorage.on('connected', function() {
+    console.log("remoteStorage connected\n");
+    pending.resolve();
+  });
+  remoteStorage.on('error', function(error) {
+    console.error('Error:', error);
+    pending.reject(error);
+  });
+
+  remoteStorage.connect(program.rsUser, program.rsToken);
+
+  return pending.promise;
+};
+
+module.exports = function(program){
+
+  if (!validateZncDir(program.input)) { process.exit(1) };
+
+  var logsDir = program.input+'moddata/log/';
   var files = fs.readdirSync(logsDir);
 
   if (files.length > 0) {
     console.log('Importing '+files.length+' log files from '+logsDir+'\n');
+
+    setupRemoteStorage(program).then(function(){
+      console.log('Starting import...\n');
+    }, function(error) {
+      process.exit(1);
+    });
   } else {
-    console.error('Error No files found in '+logsDir);
+    console.error('Error: No files found in', logsDir);
     process.exit(1);
   }
 

@@ -25,7 +25,7 @@ if (!(program.rsUser && program.rsToken &&
 
   switch(program.type) {
     case 'znc':
-      importZncBackup(program.input);
+      importZncBackup(program);
       break;
   }
 }
