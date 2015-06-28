@@ -17,6 +17,8 @@
   "dependencies": {
     "bluebird": "^2.9.30",
     "commander": "^2.8.1",
+    "glob": "^5.0.12",
+    "line-reader": "^0.2.4",
     "remotestoragejs": "remotestorage/remotestorage.js#eafe8ce4e975479c511c7685b1c9a70fcef0bebe"
   }
 }
