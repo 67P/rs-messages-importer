@@ -1,11 +1,13 @@
-var fs = require('fs');
-var path = require('path');
-var glob = require("glob");
-var lineReader = require('line-reader');
+var fs          = require('fs');
+var path        = require('path');
+var glob        = require("glob");
+var lineReader  = require('line-reader');
+var async       = require('async');
+var ProgressBar = require('progress');
 
 var RemoteStorage = require("remotestoragejs");
 require("../lib/messages-irc.js");
-var remoteStorage = new RemoteStorage({logging: true});
+var remoteStorage = new RemoteStorage();
 global.remoteStorage = remoteStorage;
 var rsMessagesIrc = remoteStorage["messages-irc"];
 
@@ -44,7 +46,6 @@ var collectFilesNew = function(program) {
   else {
     var logsDir = dir+'moddata/log/';
     var pattern = logsDir+program.zncUser+'/**/*.log';
-    console.log(pattern);
     var files = glob.sync(pattern);
 
     // TODO allow only network filtering
@@ -64,13 +65,10 @@ var setupRemoteStorage = function(program) {
   var pending = Promise.defer();
 
   remoteStorage.access.claim("messages-irc", "rw");
-  remoteStorage.caching.disable("/");
+  // remoteStorage.caching.disable("/");
 
-  remoteStorage.on('ready', function() {
-    console.log("remoteStorage ready");
-  });
   remoteStorage.on('connected', function() {
-    console.log("remoteStorage connected\n");
+    console.log("Remote storage connected\n");
     pending.resolve();
   });
   remoteStorage.on('error', function(error) {
@@ -91,14 +89,20 @@ var parseServerHostFromConfigFile = function(filename, network) {
 
 var importFromFilesOld = function(program, dir, files) {
   console.log('Importing '+files.length+' (pre-1.6) log files from '+dir+'\n');
-  var pending = Promise.defer();
+  let pending = Promise.defer();
 
-  files.forEach(function(filename, index) {
-    var matches = filename.match(/_(.+)_(.+)_(\d+)\.log/i);
-    var network = matches[1];
-    var channel = matches[2];
-    var dateStr = matches[3].substr(0,4)+'-'+matches[3].substr(4,2)+'-'+matches[3].substr(6,2);
-    var date = new Date(Date.parse(dateStr));
+  let bar = new ProgressBar(':bar Progress: :current/:total (:percent) ETA: :etas', {
+    total: files.length,
+    width: 80
+  });
+
+  async.eachSeries(files, (filename, callback) => {
+
+    let matches = filename.match(/_(.+)_(.+)_(\d+)\.log/i);
+    let network = matches[1];
+    let channel = matches[2];
+    let dateStr = matches[3].substr(0,4)+'-'+matches[3].substr(4,2)+'-'+matches[3].substr(6,2);
+    let date = new Date(Date.parse(dateStr));
 
     parseFile(filename, dateStr).then(function(messages) {
       if (messages.length > 0) {
@@ -111,14 +115,18 @@ var importFromFilesOld = function(program, dir, files) {
           isPublic: program.rsPublic || false
         });
 
-        // TODO use promise
-        archive.addMessages(messages, true);
-
-        if (index === files.length-1) {
-          pending.resolve();
-        }
+        archive.addMessages(messages, true).then(() => {
+          bar.tick();
+          callback();
+        });
+      } else {
+        bar.tick();
+        callback();
       }
     });
+  }, () => {
+    console.log();
+    pending.resolve();
   });
 
   return pending.promise;
@@ -204,10 +212,10 @@ module.exports = function(program){
       var privPub = program.rsPublic ? 'public' : 'private';
       console.log('Starting import to '+privPub+' folder\n');
       if (oldFiles.length > 0) { importFromFilesOld(program, logsDir, oldFiles); };
-      if (newFiles.length > 0) { importFromFilesNew(program, logsDir, newFiles); };
+      // if (newFiles.length > 0) { importFromFilesNew(program, logsDir, newFiles); };
     });
   } else {
-    console.error('Error: No log files found');
+    console.error('\nError: No log files found');
     process.exit(1);
   }
 
