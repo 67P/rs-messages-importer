@@ -1,7 +1,5 @@
 var fs          = require('fs');
-var path        = require('path');
 var glob        = require("glob");
-var lineReader  = require('line-reader');
 var async       = require('async');
 var ProgressBar = require('progress');
 
@@ -190,7 +188,7 @@ var parseFile = function(filename, dateStr) {
   var content = fs.readFileSync(filename, {encoding: 'utf-8'}).split('\n');
 
   content.forEach(function(line, index) {
-    var message = {}
+    var message = {};
     var matchTextMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \<(.+)\> (.+)$/);
     var matchJoinMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \*\*\* Joins\: (\w+) \(/);
     var matchLeaveMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \*\*\* Quits\: (\w+) \(/);
@@ -222,7 +220,7 @@ var parseFile = function(filename, dateStr) {
   });
 
   return pending.promise;
-}
+};
 
 module.exports = function(program){
 
