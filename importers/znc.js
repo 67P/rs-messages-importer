@@ -176,12 +176,24 @@ var parseFile = function(filename, dateStr) {
   content.forEach(function(line, index) {
     var message = {}
     var matchTextMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \<(.+)\> (.+)$/);
+    var matchJoinMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \*\*\* Joins\: (.+)\s/);
+    var matchLeaveMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \*\*\* Quits\: (.+)\s/);
 
     if (matchTextMessage) {
       message.timestamp = Date.parse(dateStr+' '+matchTextMessage[1]);
       message.from = matchTextMessage[2];
       message.text = matchTextMessage[3];
-      message.type = "text"
+      message.type = "text";
+    }
+    else if (matchJoinMessage) {
+      message.timestamp = Date.parse(dateStr+' '+matchJoinMessage[1]);
+      message.from = matchJoinMessage[2];
+      message.type = "join";
+    }
+    else if (matchLeaveMessage) {
+      message.timestamp = Date.parse(dateStr+' '+matchLeaveMessage[1]);
+      message.from = matchLeaveMessage[2];
+      message.type = "leave";
     }
 
     if (Object.keys(message).length !== 0) {
