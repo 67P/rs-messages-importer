@@ -88,8 +88,10 @@ var parseServerHostFromConfigFile = function(filename, network) {
 };
 
 var importFromFilesOld = function(program, dir, files) {
-  console.log('Importing '+files.length+' (pre-1.6) log files from '+dir+'\n');
   let pending = Promise.defer();
+  if (files.length === 0) { pending.resolve(); }
+
+  console.log('Importing '+files.length+' (pre-1.6) log files from '+dir+'\n');
 
   let bar = new ProgressBar(':bar Progress: :current/:total (:percent) ETA: :etas', {
     total: files.length,
@@ -124,6 +126,7 @@ var importFromFilesOld = function(program, dir, files) {
         callback();
       }
     });
+
   }, () => {
     console.log();
     pending.resolve();
@@ -133,16 +136,24 @@ var importFromFilesOld = function(program, dir, files) {
 };
 
 var importFromFilesNew = function(program, dir, files) {
-  console.log('Importing '+files.length+' log files from '+dir+'\n');
   var pending = Promise.defer();
+  if (files.length === 0) { pending.resolve(); }
 
-  files.forEach(function(filename, index) {
-    var matches = filename.match(new RegExp('log/'+program.zncUser+'/'+'\(\.\+\)'))[1]
+  console.log('Importing '+files.length+' log files from '+dir+program.zncUser+'/'+'\n');
+
+  let bar = new ProgressBar(':bar Progress: :current/:total (:percent) ETA: :etas', {
+    total: files.length,
+    width: 80
+  });
+
+  async.eachSeries(files, (filename, callback) => {
+
+    let matches = filename.match(new RegExp('log/'+program.zncUser+'/'+'\(\.\+\)'))[1]
                           .match(/(.+)\/(.+)\/(.+)\.log$/i);
-    var network = matches[1];
-    var channel = matches[2];
-    var dateStr = matches[3];
-    var date = new Date(Date.parse(dateStr));
+    let network = matches[1];
+    let channel = matches[2];
+    let dateStr = matches[3];
+    let date = new Date(Date.parse(dateStr));
 
     parseFile(filename, dateStr).then(function(messages) {
       if (messages.length > 0) {
@@ -155,14 +166,19 @@ var importFromFilesNew = function(program, dir, files) {
           isPublic: program.rsPublic || false
         });
 
-        // TODO use promise
-        archive.addMessages(messages, true);
-
-        if (index === files.length-1) {
-          pending.resolve();
-        }
+        archive.addMessages(messages, true).then(() => {
+          bar.tick();
+          callback();
+        });
+      } else {
+        bar.tick();
+        callback();
       }
     });
+
+  }, () => {
+    console.log();
+    pending.resolve();
   });
 
   return pending.promise;
@@ -176,8 +192,8 @@ var parseFile = function(filename, dateStr) {
   content.forEach(function(line, index) {
     var message = {}
     var matchTextMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \<(.+)\> (.+)$/);
-    var matchJoinMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \*\*\* Joins\: (.+)\s/);
-    var matchLeaveMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \*\*\* Quits\: (.+)\s/);
+    var matchJoinMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \*\*\* Joins\: (\w+) \(/);
+    var matchLeaveMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \*\*\* Quits\: (\w+) \(/);
 
     if (matchTextMessage) {
       message.timestamp = Date.parse(dateStr+' '+matchTextMessage[1]);
@@ -223,8 +239,9 @@ module.exports = function(program){
     setupRemoteStorage(program).then(function(){
       var privPub = program.rsPublic ? 'public' : 'private';
       console.log('Starting import to '+privPub+' folder\n');
-      if (oldFiles.length > 0) { importFromFilesOld(program, logsDir, oldFiles); };
-      // if (newFiles.length > 0) { importFromFilesNew(program, logsDir, newFiles); };
+      importFromFilesOld(program, logsDir, oldFiles).then(() => {
+        importFromFilesNew(program, logsDir, newFiles);
+      });
     });
   } else {
     console.error('\nError: No log files found');
