@@ -2,14 +2,16 @@ var fs          = require('fs');
 var glob        = require("glob");
 var async       = require('async');
 var ProgressBar = require('progress');
+var program     = null;
 
 var RemoteStorage = require("remotestoragejs");
-require("../lib/messages-irc.js");
+require("../lib/chat-messages.js");
 var remoteStorage = new RemoteStorage();
 global.remoteStorage = remoteStorage;
-var rsMessagesIrc = remoteStorage["messages-irc"];
+var chatMessages = remoteStorage["chat-messages"];
+var dailyLogs = {};
 
-var collectFilesOld = function(program) {
+var collectFilesOld = function() {
   var dir = program.input;
 
   if (!fs.existsSync(dir+'moddata/log/')) {
@@ -34,7 +36,7 @@ var collectFilesOld = function(program) {
   }
 };
 
-var collectFilesNew = function(program) {
+var collectFilesNew = function() {
   var dir = program.input;
 
   if (!fs.existsSync(dir+'moddata/log/'+program.zncUser+'/')) {
@@ -59,7 +61,7 @@ var collectFilesNew = function(program) {
   }
 };
 
-var setupRemoteStorage = function(program) {
+var setupRemoteStorage = function() {
   var pending = Promise.defer();
 
   remoteStorage.access.claim("messages-irc", "rw");
@@ -85,16 +87,11 @@ var parseServerHostFromConfigFile = function(filename, network) {
            .match(/Server \= (.+) [\d\+]/im)[1];
 };
 
-var importFromFilesOld = function(program, dir, files) {
+var importFromFilesOld = function(dir, files) {
   let pending = Promise.defer();
   if (files.length === 0) { pending.resolve(); }
 
-  console.log('Importing '+files.length+' (pre-1.6) log files from '+dir+'\n');
-
-  let bar = new ProgressBar(':bar Progress: :current/:total (:percent) ETA: :etas', {
-    total: files.length,
-    width: 80
-  });
+  console.log('Parsing '+files.length+' (pre-1.6) log files from '+dir);
 
   async.eachSeries(files, (filename, callback) => {
 
@@ -102,47 +99,31 @@ var importFromFilesOld = function(program, dir, files) {
     let network = matches[1];
     let channel = matches[2];
     let dateStr = matches[3].substr(0,4)+'-'+matches[3].substr(4,2)+'-'+matches[3].substr(6,2);
-    let date = new Date(Date.parse(dateStr));
+    let dateId  = dateStr.replace(/\-/g, '\/');
 
     parseFile(filename, dateStr).then(function(messages) {
       if (messages.length > 0) {
-        var serverHost = parseServerHostFromConfigFile(program.input+'configs/znc.conf', network);
-
-        var archive = new rsMessagesIrc.DailyArchive({
-          network: { name: network, ircURI: 'irc://'+serverHost },
-          channelName: channel,
-          date: date,
-          isPublic: program.rsPublic || false
-        });
-
-        archive.addMessages(messages, true).then(() => {
-          bar.tick();
-          callback();
-        });
+        dailyLogs[network] = dailyLogs[network] || {};
+        dailyLogs[network][channel] = dailyLogs[network][channel] || {};
+        dailyLogs[network][channel][dateId] = messages;
+        callback();
       } else {
-        bar.tick();
         callback();
       }
     });
 
   }, () => {
-    console.log();
     pending.resolve();
   });
 
   return pending.promise;
 };
 
-var importFromFilesNew = function(program, dir, files) {
+var importFromFilesNew = function(dir, files) {
   var pending = Promise.defer();
   if (files.length === 0) { pending.resolve(); }
 
-  console.log('Importing '+files.length+' log files from '+dir+program.zncUser+'/'+'\n');
-
-  let bar = new ProgressBar(':bar Progress: :current/:total (:percent) ETA: :etas', {
-    total: files.length,
-    width: 80
-  });
+  console.log('Parsing '+files.length+' log files from '+dir+program.zncUser+'/');
 
   async.eachSeries(files, (filename, callback) => {
 
@@ -151,31 +132,67 @@ var importFromFilesNew = function(program, dir, files) {
     let network = matches[1];
     let channel = matches[2];
     let dateStr = matches[3];
-    let date = new Date(Date.parse(dateStr));
+    let dateId  = dateStr.replace(/\-/g, '\/');
 
     parseFile(filename, dateStr).then(function(messages) {
       if (messages.length > 0) {
+        dailyLogs[network] = dailyLogs[network] || {};
+        dailyLogs[network][channel] = dailyLogs[network][channel] || {};
+        dailyLogs[network][channel][dateId] = messages;
+        callback();
+      } else {
+        callback();
+      }
+    });
+  }, () => {
+    pending.resolve();
+  });
+
+  return pending.promise;
+};
+
+var writeDailyLogsToStorage = function() {
+  let pending = Promise.defer();
+  let networks = Object.keys(dailyLogs);
+
+  async.eachSeries(networks, (network, networkCallback) => {
+    let channels = Object.keys(dailyLogs[network]);
+
+    async.eachSeries(channels, (channel, channelCallback) => {
+      let days = Object.keys(dailyLogs[network][channel]);
+
+      console.log(`\nWriting archives for ${network}/${channel} to storage`);
+      let bar = new ProgressBar(':bar Progress: :current/:total (:percent) ETA: :etas', {
+        total: days.length,
+        width: 80
+      });
+
+      async.eachSeries(days, (day, dayCallback) => {
+        let messages = dailyLogs[network][channel][day];
+        // TODO cache in memory instead of looking up for every day
         var serverHost = parseServerHostFromConfigFile(program.input+'configs/znc.conf', network);
 
-        var archive = new rsMessagesIrc.DailyArchive({
-          network: { name: network, ircURI: 'irc://'+serverHost },
+        var archive = new chatMessages.DailyArchive({
+          server: { type: 'irc', name: network, ircURI: 'irc://'+serverHost },
           channelName: channel,
-          date: date,
-          isPublic: program.rsPublic || false
+          date: new Date(messages[0].timestamp),
+          isPublic: program.rsPublic || false,
+          // TODO
+          // previous: ,
+          // next: ,
         });
 
         archive.addMessages(messages, true).then(() => {
           bar.tick();
-          callback();
+          dayCallback();
         });
-      } else {
-        bar.tick();
-        callback();
-      }
+      }, () => {
+        channelCallback();
+      });
+    }, () => {
+      networkCallback();
     });
-
   }, () => {
-    console.log();
     pending.resolve();
   });
 
@@ -183,15 +200,19 @@ var importFromFilesNew = function(program, dir, files) {
 };
 
 var parseFile = function(filename, dateStr) {
-  var pending = Promise.defer();
-  var messages = [];
-  var content = fs.readFileSync(filename, {encoding: 'utf-8'}).split('\n');
+  let pending = Promise.defer();
+  let messages = [];
+  let content = fs.readFileSync(filename, {encoding: 'utf-8'}).split('\n');
 
   content.forEach(function(line, index) {
-    var message = {};
-    var matchTextMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \<(.+)\> (.+)$/);
-    var matchJoinMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \*\*\* Joins\: (\w+) \(/);
-    var matchLeaveMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \*\*\* Quits\: (\w+) \(/);
+    let message = {};
+    let matchTextMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \<(.+)\> (.+)$/);
+    let matchJoinMessage = false;
+    let matchLeaveMessage = false;
+    if (program.noisy) {
+      matchJoinMessage= line.match(/^\[(\d{2}:\d{2}:\d{2})\] \*\*\* Joins\: (\w+) \(/);
+      matchLeaveMessage = line.match(/^\[(\d{2}:\d{2}:\d{2})\] \*\*\* Quits\: (\w+) \(/);
+    }
 
     if (matchTextMessage) {
       message.timestamp = Date.parse(dateStr+' '+matchTextMessage[1]);
@@ -222,23 +243,30 @@ var parseFile = function(filename, dateStr) {
   return pending.promise;
 };
 
-module.exports = function(program){
+module.exports = function(prog){
+
+  program = prog;
 
   if (!fs.existsSync(program.input)) {
     console.error('Input directory doesn\'t exist');
     process.exit(1);
   }
 
-  var logsDir = program.input+'moddata/log/';
-  var oldFiles = collectFilesOld(program) || [];
-  var newFiles = collectFilesNew(program) || [];
+  let logsDir = program.input+'moddata/log/';
+  let oldFiles = collectFilesOld() || [];
+  let newFiles = collectFilesNew() || [];
 
   if (oldFiles.length > 0 || newFiles.length > 0) {
-    setupRemoteStorage(program).then(function(){
-      var privPub = program.rsPublic ? 'public' : 'private';
+    setupRemoteStorage().then(function(){
+      let privPub = program.rsPublic ? 'public' : 'private';
       console.log('Starting import to '+privPub+' folder\n');
-      importFromFilesOld(program, logsDir, oldFiles).then(() => {
-        importFromFilesNew(program, logsDir, newFiles);
+
+      importFromFilesOld(logsDir, oldFiles).then(() => {
+        importFromFilesNew(logsDir, newFiles).then(() => {
+          writeDailyLogsToStorage().then(() => {
+            console.log('\nAll done.');
+          });
+        });
       });
     });
   } else {
