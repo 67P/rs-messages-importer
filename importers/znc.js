@@ -170,21 +170,31 @@ var writeDailyLogsToStorage = function() {
       async.eachSeries(days, (day, dayCallback) => {
         let messages = dailyLogs[network][channel][day];
         // TODO cache in memory instead of looking up for every day
-        var serverHost = parseServerHostFromConfigFile(program.input+'configs/znc.conf', network);
+        let serverHost = parseServerHostFromConfigFile(program.input+'configs/znc.conf', network);
+        let indexToday = days.findIndex(x => x === day);
+        let previousDay, nextDay;
+
+        if (indexToday > 0) {
+          previousDay = days[indexToday-1];
+        }
+        if (indexToday !== (days.length-1)) {
+          nextDay = days[indexToday+1];
+        }
 
         var archive = new chatMessages.DailyArchive({
           server: { type: 'irc', name: network, ircURI: 'irc://'+serverHost },
           channelName: channel,
           date: new Date(messages[0].timestamp),
           isPublic: program.rsPublic || false,
-          // TODO
-          // previous: ,
-          // next: ,
+          previous: previousDay,
+          next: nextDay
         });
 
         archive.addMessages(messages, true).then(() => {
           bar.tick();
           dayCallback();
+        }, (error) => {
+          console.log('Something went wrong:', error);
         });
       }, () => {
         channelCallback();
