@@ -8,7 +8,6 @@ var RemoteStorage = require("remotestoragejs");
 require("../lib/chat-messages.js");
 var remoteStorage = new RemoteStorage();
 global.remoteStorage = remoteStorage;
-var chatMessages = remoteStorage["chat-messages"];
 var dailyLogs = {};
 
 var collectFilesOld = function() {
@@ -181,7 +180,7 @@ var writeDailyLogsToStorage = function() {
           nextDay = days[indexToday+1];
         }
 
-        var archive = new chatMessages.DailyArchive({
+        var archive = new remoteStorage.chatMessages.DailyArchive({
           server: { type: 'irc', name: network, ircURI: 'irc://'+serverHost },
           channelName: channel,
           date: new Date(messages[0].timestamp),
