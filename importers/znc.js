@@ -92,7 +92,7 @@ var setupRemoteStorage = function() {
 
 var parseServerHostFromConfigFile = function(filename, network) {
   return fs.readFileSync(filename, {encoding: 'utf-8'})
-           .match(new RegExp('<Network '+network+'>\[\\S\\s\]\*<Network', 'im'))[0]
+           .match(new RegExp('<Network '+network+'>\[\\S\\s\]\*</Network', 'im'))[0]
            .match(/Server \= (.+) [\d\+]/im)[1];
 };
 
