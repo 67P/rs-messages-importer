@@ -22,7 +22,12 @@ var collectFilesOld = function() {
     var pattern = logsDir+program.zncUser+'_*.log';
     var files = glob.sync(pattern);
 
-    // TODO allow only network filtering
+    if (program.zncNetwork && !program.zncChannel) {
+      files = files.filter(function(filename) {
+        var r = new RegExp(program.zncUser+'_'+program.zncNetwork+'_', 'i');
+        return filename.match(r);
+      });
+    }
 
     if (program.zncNetwork && program.zncChannel) {
       files = files.filter(function(filename) {
@@ -47,7 +52,12 @@ var collectFilesNew = function() {
     var pattern = logsDir+program.zncUser+'/**/*.log';
     var files = glob.sync(pattern);
 
-    // TODO allow only network filtering
+    if (program.zncNetwork && !program.zncChannel) {
+      files = files.filter(function(filename) {
+        var r = new RegExp(program.zncUser+'\/'+program.zncNetwork+'\/', 'i');
+        return filename.match(r);
+      });
+    }
 
     if (program.zncNetwork && program.zncChannel) {
       files = files.filter(function(filename) {
