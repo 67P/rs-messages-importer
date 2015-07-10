@@ -17,8 +17,8 @@ Planned:
 
 ## Installation
 
-    * Clone this repository
-    * `npm install`
+* Clone this repository
+* `npm install`
 
 (TODO: add binary and publish npm package)
 
