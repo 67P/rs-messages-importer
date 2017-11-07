@@ -195,11 +195,6 @@ module.exports = function(prog) {
 
   program = prog;
 
-  if (!fs.existsSync(program.input)) {
-    console.error('Input directory doesn\'t exist');
-    process.exit(1);
-  }
-
   let logsDir = program.input;
   let files = collectFiles() || [];
 
