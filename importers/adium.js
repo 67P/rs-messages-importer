@@ -9,7 +9,7 @@ var parseString = require('xml2js').parseString;
 
 var RemoteStorage = require("remotestoragejs");
 var ChatMessages = require("remotestorage-module-chat-messages");
-var remoteStorage = new RemoteStorage({ modules: [ ChatMessages.default ] });
+var remoteStorage = new RemoteStorage({ caching: false, modules: [ ChatMessages.default ] });
 var dailyLogs = {};
 
 var collectFiles = function() {
@@ -34,7 +34,6 @@ var setupRemoteStorage = function() {
   pending.resolve();
 
   remoteStorage.access.claim("messages-irc", "rw");
-  // remoteStorage.caching.disable("/");
 
   remoteStorage.on('connected', function() {
     console.log("Remote storage connected\n");
