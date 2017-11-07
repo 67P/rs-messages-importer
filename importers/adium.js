@@ -25,20 +25,6 @@ var collectFiles = function() {
     var pattern = logsDir+'/**/*'+mucServer+'*.xml';
     var files = glob.sync(pattern);
 
-    // if (program.zncNetwork && !program.zncChannel) {
-    //   files = files.filter(function(filename) {
-    //     var r = new RegExp(program.zncUser+'\/'+program.zncNetwork+'\/', 'i');
-    //     return filename.match(r);
-    //   });
-    // }
-
-    // if (program.zncChannel) {
-    //   files = files.filter(function(filename) {
-    //     var r = new RegExp(program.zncUser+'\/'+program.zncNetwork+'\/'+program.zncChannel+'/', 'i');
-    //     return filename.match(r);
-    //   });
-    // }
-
     return files;
   }
 };
