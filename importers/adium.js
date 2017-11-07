@@ -9,7 +9,7 @@ var parseString = require('xml2js').parseString;
 
 var RemoteStorage = require("remotestoragejs");
 var ChatMessages = require("remotestorage-module-chat-messages");
-var remoteStorage = new RemoteStorage({ caching: false, modules: [ ChatMessages.default ] });
+var remoteStorage = new RemoteStorage({ cache: false, modules: [ ChatMessages.default ] });
 var dailyLogs = {};
 
 var collectFiles = function() {

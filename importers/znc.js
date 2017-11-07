@@ -7,7 +7,7 @@ var program     = null;
 
 var RemoteStorage = require("remotestoragejs");
 var ChatMessages = require("remotestorage-module-chat-messages");
-var remoteStorage = new RemoteStorage({ caching: false, modules: [ ChatMessages.default ] });
+var remoteStorage = new RemoteStorage({ cache: false, modules: [ ChatMessages.default ] });
 var dailyLogs = {};
 
 var collectFilesOld = function() {
