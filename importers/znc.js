@@ -1,13 +1,13 @@
 var fs          = require('fs');
 var glob        = require("glob");
 var async       = require('async');
+var Promise     = require('bluebird');
 var ProgressBar = require('progress');
 var program     = null;
 
 var RemoteStorage = require("remotestoragejs");
-require("../lib/chat-messages.js");
-var remoteStorage = new RemoteStorage();
-global.remoteStorage = remoteStorage;
+var ChatMessages = require("remotestorage-module-chat-messages");
+var remoteStorage = new RemoteStorage({ modules: [ ChatMessages.default ] });
 var dailyLogs = {};
 
 var collectFilesOld = function() {
