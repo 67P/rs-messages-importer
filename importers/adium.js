@@ -31,7 +31,6 @@ var collectFiles = function() {
 
 var setupRemoteStorage = function() {
   var pending = Promise.defer();
-  pending.resolve();
 
   remoteStorage.access.claim("messages-irc", "rw");
 
