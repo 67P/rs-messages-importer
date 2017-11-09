@@ -24,7 +24,7 @@ Planned:
 
 ## Usage
 
-    npm run importer - --help
+    npm run importer -- --help
 
 The URLs of your imported logs will look something like this:
 
