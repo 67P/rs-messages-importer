@@ -56,17 +56,20 @@ var importFromFiles = function(dir, files) {
 
   async.eachSeries(files, (filename, callback) => {
     let baseName = path.basename(filename);
-    let matches = baseName.match(/(.+)@.+\ \((\d{4}-\d{2}-\d{2}).+\)\.xml$/i)
+    let matches = baseName.match(/(.+)@.+\ \(\d{4}-\d{2}-\d{2}.+\)\.xml$/i)
     let network = '5apps'
     let room = matches[1];
-    let dateStr = matches[2];
-    let dateId  = dateStr.replace(/\-/g, '\/');
 
-    parseFile(filename, dateStr).then(function(messages) {
+    parseFile(filename).then(function(messages) {
       if (messages.length > 0) {
+        let date = new Date(messages[0].timestamp).toISOString();
+        let dateId = date.match(/(\d{4}-\d{2}-\d{2})/)[1].replace(/\-/g, '\/');
         dailyLogs[network] = dailyLogs[network] || {};
         dailyLogs[network][room] = dailyLogs[network][room] || {};
-        dailyLogs[network][room][dateId] = messages;
+        dailyLogs[network][room][dateId] = dailyLogs[network][room][dateId] || [];
+        messages.forEach(function(m) {
+          dailyLogs[network][room][dateId].push(m);
+        });
         callback();
       } else {
         callback();
@@ -137,7 +140,7 @@ var writeDailyLogsToStorage = function() {
   return pending.promise;
 };
 
-var parseFile = function(filename, dateStr) {
+var parseFile = function(filename) {
   let pending = Promise.defer();
   let messages = [];
   let content = fs.readFileSync(filename);
@@ -153,14 +156,20 @@ var parseFile = function(filename, dateStr) {
 
       message.timestamp = Date.parse(m['$']['time']);
       message.from = m['$']['sender'];
+      var text;
+      // FIXME: Find a way to recursively turn anything into text
       if(m['div'][0]['span']) {
-        message.text = m['div'][0]['span'][0]['_'];
+        text = m['div'][0]['span'][0]['_'];
+        if(m['div'][0]['span'][0]['a']) {
+          text = text + m['div'][0]['span'][0]['a'][0]['_'];
+        }
       } else if(m['div'][0]['a']) {
-        message.text = m['div'][0]['a'][0]['_'];
+        text = m['div'][0]['a'][0]['_'];
       }
+      message.text = text;
       message.type = "text";
 
-      if (Object.keys(message).length !== 0) {
+      if (message.text && Object.keys(message).length !== 0) {
         messages.push(message);
       }
 
