@@ -158,7 +158,7 @@ var parseFile = function(filename) {
         // TODO
       }
 
-      message.from = m['$']['sender'];
+      message.from = m['$']['alias'];
       message.timestamp = Date.parse(m['$']['time']);
       var text = '';
       m['div'].forEach(function(element) {
