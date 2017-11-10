@@ -157,23 +157,26 @@ var parseFile = function(filename) {
       message.from = m['$']['sender'];
       message.timestamp = Date.parse(m['$']['time']);
       var text = '';
-      // FIXME: Find a way to recursively turn anything into text
-      if (typeof m['div'][0] === 'string') {
-        text = m['div'][0];
-      } else if (m['div'][0]['span']) {
-        var span = m['div'][0]['span']
-        if (span[0]['a'] && typeof span[0]['a'][0]['_'] === 'string') {
-          text = text + span[0]['a'][0]['_'];
+      m['div'].forEach(function(element) {
+        if (typeof element === 'string') {
+          text = element;
+        } else if (element['span']) {
+          var span = element['span']
+          span.forEach(function(spanChild) {
+            if (spanChild['a'] && typeof spanChild['a'][0]['_'] === 'string') {
+              text = text + spanChild['a'][0]['_'];
+            }
+            while (spanChild) {
+              if (spanChild && spanChild['_'] && typeof spanChild['_'] === 'string') {
+                text = text + spanChild['_'];
+              }
+              spanChild = spanChild['span'];
+            }
+          });
+        } else if (element['a'] && typeof element['a'][0]['_'] === 'string') {
+          text = element['a'][0]['_'];
         }
-        while (span) {
-          if (span && span[0]['_'] && typeof span[0]['_'] === 'string') {
-            text = text + span[0]['_'];
-          }
-          span = span[0]['span'];
-        }
-      } else if (m['div'][0]['a'] && typeof m['div'][0]['a'][0]['_'] === 'string') {
-        text = m['div'][0]['a'][0]['_'];
-      }
+      });
       message.type = "text";
       message.text = text;
 
