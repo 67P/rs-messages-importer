@@ -165,15 +165,32 @@ var parseFile = function(filename) {
         if (typeof element === 'string') {
           text = element;
         } else if (element['span']) {
-          var span = element['span']
-          span.forEach(function(spanChild) {
+          element['span'].forEach(function(spanChild) {
             while (spanChild) {
               if (spanChild['a'] && typeof spanChild['a'][0]['_'] === 'string') {
                 text = text + spanChild['a'][0]['_'] + ' ';
-              }
-              if (spanChild && spanChild['_'] && typeof spanChild['_'] === 'string') {
+              } else if (spanChild['_'] && typeof spanChild['_'] === 'string') {
                 text = text + spanChild['_'];
+              } else if (spanChild['span']) {
+                spanChild['span'].forEach(function(secondarySpan) {
+                  while (secondarySpan) {
+                    if (Object.prototype.toString.call(secondarySpan) === '[object Array]') {
+                      secondarySpan.forEach(function(secondarySpanObject) {
+                        if (secondarySpanObject['_'] && typeof secondarySpanObject['_'] === 'string') {
+                          text = text + secondarySpanObject['_'];
+                        }
+                      });
+                    } else {
+                      if (secondarySpan['_'] && typeof secondarySpan['_'] === 'string') {
+                        text = text + secondarySpan['_'] + ' ';
+                      }
+                    }
+                    // nested spans
+                    secondarySpan = secondarySpan['span'];
+                  }
+                });
               }
+              // nested spans
               spanChild = spanChild['span'];
             }
           });
