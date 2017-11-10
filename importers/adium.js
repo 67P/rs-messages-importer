@@ -167,10 +167,10 @@ var parseFile = function(filename) {
         } else if (element['span']) {
           var span = element['span']
           span.forEach(function(spanChild) {
-            if (spanChild['a'] && typeof spanChild['a'][0]['_'] === 'string') {
-              text = text + spanChild['a'][0]['_'];
-            }
             while (spanChild) {
+              if (spanChild['a'] && typeof spanChild['a'][0]['_'] === 'string') {
+                text = text + spanChild['a'][0]['_'] + ' ';
+              }
               if (spanChild && spanChild['_'] && typeof spanChild['_'] === 'string') {
                 text = text + spanChild['_'];
               }
