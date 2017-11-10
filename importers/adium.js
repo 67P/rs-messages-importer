@@ -17,13 +17,17 @@ var collectFiles = function() {
   var mucServer = program.adiumMuc;
 
   if (!fs.existsSync(dir)) {
-    console.log('Input directory doesn\'t contain Adium logs (should be in ~/Library/Application\ Support/Adium\ 2.0/Users/Default/Logs/Jabber.[adium-user]/)');
+    console.log('Input directory doesn\'t exist');
     return false;
   }
   else {
     var logsDir = dir;
     var pattern = logsDir+'/**/*'+mucServer+'*.xml';
     var files = glob.sync(pattern);
+    if (files.length === 0) {
+      console.log('Input directory doesn\'t contain Adium logs (should be in ~/Library/Application\ Support/Adium\ 2.0/Users/Default/Logs/Jabber.[adium-user]/)');
+      return false;
+    }
 
     return files;
   }
