@@ -154,8 +154,8 @@ var parseFile = function(filename) {
         // TODO
       }
 
-      message.timestamp = Date.parse(m['$']['time']);
       message.from = m['$']['sender'];
+      message.timestamp = Date.parse(m['$']['time']);
       var text = '';
       // FIXME: Find a way to recursively turn anything into text
       if (typeof m['div'][0] === 'string') {
@@ -174,8 +174,8 @@ var parseFile = function(filename) {
       } else if (m['div'][0]['a'] && typeof m['div'][0]['a'][0]['_'] === 'string') {
         text = m['div'][0]['a'][0]['_'];
       }
-      message.text = text;
       message.type = "text";
+      message.text = text;
 
       if (message.text && Object.keys(message).length !== 0) {
         messages.push(message);
