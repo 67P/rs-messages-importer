@@ -6,10 +6,11 @@ var path            = require('path');
 var pkg             = require(path.join(__dirname, 'package.json'));
 var program         = require('commander');
 var importZncBackup = require('./importers/znc');
+var importAdiumBackup = require('./importers/adium');
 
 program
   .version(pkg.version)
-  .option('-t, --type <type>', 'input type/format', /^(znc)$/i)
+  .option('-t, --type <type>', 'input type/format', /^(znc|adium)$/i)
   .option('-i, --input <type>', 'input directory')
   .option('--noisy', 'import join/leave messages as well')
   .option('--rs-user <user address>', 'user address of the RS account to import to')
@@ -18,6 +19,7 @@ program
   .option('--znc-user <username>', 'username of the ZNC user account')
   .option('--znc-network <network>', 'only import logs from given network')
   .option('--znc-channel <channel>', 'only import logs from given channel')
+  .option('--adium-muc <muc>', 'muc server to import rooms')
   .parse(process.argv);
 
 if (!(program.rsUser && program.rsToken &&
@@ -35,6 +37,13 @@ if (!(program.rsUser && program.rsToken &&
         process.exit(1);
       }
       importZncBackup(program);
+      break;
+    case 'adium':
+      if (!program.adiumMuc) {
+        console.error('Error: Adium import needs value for --adium-muc');
+        process.exit(1);
+      }
+      importAdiumBackup(program);
       break;
   }
 }
