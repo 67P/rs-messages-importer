@@ -156,14 +156,22 @@ var parseFile = function(filename) {
 
       message.timestamp = Date.parse(m['$']['time']);
       message.from = m['$']['sender'];
-      var text;
+      var text = '';
       // FIXME: Find a way to recursively turn anything into text
-      if(m['div'][0]['span']) {
-        text = m['div'][0]['span'][0]['_'];
-        if(m['div'][0]['span'][0]['a']) {
-          text = text + m['div'][0]['span'][0]['a'][0]['_'];
+      if (typeof m['div'][0] === 'string') {
+        text = m['div'][0];
+      } else if (m['div'][0]['span']) {
+        var span = m['div'][0]['span']
+        if (span[0]['a'] && typeof span[0]['a'][0]['_'] === 'string') {
+          text = text + span[0]['a'][0]['_'];
         }
-      } else if(m['div'][0]['a']) {
+        while (span) {
+          if (span && span[0]['_'] && typeof span[0]['_'] === 'string') {
+            text = text + span[0]['_'];
+          }
+          span = span[0]['span'];
+        }
+      } else if (m['div'][0]['a'] && typeof m['div'][0]['a'][0]['_'] === 'string') {
         text = m['div'][0]['a'][0]['_'];
       }
       message.text = text;
