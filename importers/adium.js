@@ -62,12 +62,12 @@ var importFromFiles = function(dir, files) {
 
     parseFile(filename).then(function(messages) {
       if (messages.length > 0) {
-        let date = new Date(messages[0].timestamp).toISOString();
-        let dateId = date.match(/(\d{4}-\d{2}-\d{2})/)[1].replace(/\-/g, '\/');
         dailyLogs[network] = dailyLogs[network] || {};
         dailyLogs[network][room] = dailyLogs[network][room] || {};
-        dailyLogs[network][room][dateId] = dailyLogs[network][room][dateId] || [];
         messages.forEach(function(m) {
+          var date = new Date(m.timestamp).toISOString();
+          var dateId = date.match(/(\d{4}-\d{2}-\d{2})/)[1].replace(/\-/g, '\/');
+          dailyLogs[network][room][dateId] = dailyLogs[network][room][dateId] || [];
           dailyLogs[network][room][dateId].push(m);
         });
         callback();
